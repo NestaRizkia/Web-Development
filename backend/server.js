@@ -47,25 +47,36 @@ const sessionConfig = {
   secret: process.env.SESSION_SECRET || 'your-secret-key',
   resave: false,
   saveUninitialized: false,
+  rolling: true, // Reset expiration on every response
   store: MongoStore.create({
     mongoUrl: process.env.MONGODB_URI,
     collectionName: 'sessions',
-    ttl: 24 * 60 * 60, // 24 hours
-    touchAfter: 24 * 3600 // lazy session update
+    ttl: 7 * 24 * 60 * 60, // 7 days
+    touchAfter: 24 * 3600, // lazy session update
+    autoRemove: 'native' // Let MongoDB handle expired sessions
   }),
   cookie: {
     httpOnly: true,
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours in milliseconds
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
     secure: process.env.NODE_ENV === 'production', // true in production (HTTPS)
-    domain: process.env.NODE_ENV === 'production' ? '.vercel.app' : undefined
+    path: '/' // Ensure cookie is sent for all paths
   },
-  name: 'sessionId', // custom session name
+  name: 'connect.sid', // Use default session name for better compatibility
   proxy: true // trust proxy for Vercel
 };
 
 app.set('trust proxy', 1); // trust first proxy (Vercel)
 app.use(session(sessionConfig));
+
+// Debug middleware - Log all requests and sessions
+app.use((req, res, next) => {
+  console.log(`📍 ${req.method} ${req.path}`);
+  console.log('Session ID:', req.sessionID);
+  console.log('Session:', req.session);
+  console.log('Cookies:', req.headers.cookie);
+  next();
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -74,7 +85,11 @@ app.use('/api/portfolio', portfolioRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Server is running' });
+  res.json({ 
+    status: 'OK', 
+    message: 'Server is running',
+    session: req.sessionID ? 'Session active' : 'No session'
+  });
 });
 
 // Error handling middleware

@@ -20,30 +20,45 @@ const Login = () => {
       console.log('✅ Login response:', response.data);
       
       if (response.data && response.data.message === 'Login successful') {
-        console.log('🔄 Waiting for session to be saved...');
-        // Tunggu sebentar agar session tersimpan
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log('🔄 Waiting for session to persist...');
+        // Tunggu 2 detik untuk memastikan session tersimpan ke MongoDB
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // Verifikasi session sebelum redirect
+        // Verifikasi session multiple times jika perlu
         console.log('🔍 Verifying session...');
-        try {
-          const verifyResponse = await api.get('/auth/verify');
-          console.log('✅ Session verified:', verifyResponse.data);
-          
-          if (verifyResponse.data.authenticated) {
-            console.log('🎉 Navigating to dashboard...');
-            navigate('/admin/dashboard', { replace: true });
-          } else {
-            console.error('❌ Session not authenticated');
-            setError('Session verification failed. Please try again.');
+        let attempts = 0;
+        let verified = false;
+        
+        while (attempts < 3 && !verified) {
+          try {
+            const verifyResponse = await api.get('/auth/verify');
+            console.log(`✅ Verification attempt ${attempts + 1}:`, verifyResponse.data);
+            
+            if (verifyResponse.data.authenticated) {
+              verified = true;
+              console.log('🎉 Session verified! Navigating to dashboard...');
+              navigate('/admin/dashboard', { replace: true });
+              return;
+            }
+          } catch (verifyErr) {
+            console.log(`❌ Verification attempt ${attempts + 1} failed:`, verifyErr);
           }
-        } catch (verifyErr) {
-          console.error('❌ Verification failed:', verifyErr);
-          setError('Session verification failed. Please try again.');
+          
+          attempts++;
+          if (!verified && attempts < 3) {
+            console.log('⏳ Waiting before retry...');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+        
+        if (!verified) {
+          console.error('❌ Session verification failed after 3 attempts');
+          setError('Session verification failed. Please try again or check console logs.');
         }
       }
     } catch (err) {
       console.error('❌ Login error:', err);
+      console.error('Error details:', err.response?.data);
       setError(err.response?.data?.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
