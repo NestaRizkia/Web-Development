@@ -44,19 +44,25 @@ export const login = async (req, res) => {
 
 export const verify = async (req, res) => {
   try {
+    console.log('🔍 Verify request - Session ID:', req.sessionID);
+    console.log('📦 Session data:', req.session);
+    console.log('👤 Session user:', req.session?.user);
+    
     if (req.session && req.session.user && req.session.user.isAdmin) {
+      console.log('✅ Session valid - authenticated');
       return res.status(200).json({ 
         authenticated: true,
         user: { isAdmin: true }
       });
     } else {
+      console.log('❌ Session invalid - not authenticated');
       return res.status(401).json({ 
         authenticated: false,
         message: 'Not authenticated'
       });
     }
   } catch (error) {
-    console.error('Verify error:', error);
+    console.error('❌ Verify error:', error);
     res.status(500).json({ message: 'Server error during verification' });
   }
 };

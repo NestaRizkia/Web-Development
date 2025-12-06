@@ -8,13 +8,21 @@ const AdminLayout = () => {
 
   useEffect(() => {
     checkAuth();
-  }, []);
+  }, [location.pathname]);
 
   const checkAuth = async () => {
     try {
-      await api.get('/auth/verify');
+      console.log('🔍 Checking auth for:', location.pathname);
+      const response = await api.get('/auth/verify');
+      console.log('✅ Auth check response:', response.data);
+      
+      if (!response.data.authenticated) {
+        console.log('❌ Not authenticated, redirecting to login');
+        navigate('/admin/login', { replace: true });
+      }
     } catch (error) {
-      navigate('/admin/login');
+      console.error('❌ Auth check failed:', error);
+      navigate('/admin/login', { replace: true });
     }
   };
 

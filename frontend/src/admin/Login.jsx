@@ -14,12 +14,36 @@ const Login = () => {
     setLoading(true);
 
     try {
+      console.log('🔐 Attempting login...');
       const response = await api.post('/auth/login', { password });
       
-      if (response.data) {
-        navigate('/admin/dashboard');
+      console.log('✅ Login response:', response.data);
+      
+      if (response.data && response.data.message === 'Login successful') {
+        console.log('🔄 Waiting for session to be saved...');
+        // Tunggu sebentar agar session tersimpan
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Verifikasi session sebelum redirect
+        console.log('🔍 Verifying session...');
+        try {
+          const verifyResponse = await api.get('/auth/verify');
+          console.log('✅ Session verified:', verifyResponse.data);
+          
+          if (verifyResponse.data.authenticated) {
+            console.log('🎉 Navigating to dashboard...');
+            navigate('/admin/dashboard', { replace: true });
+          } else {
+            console.error('❌ Session not authenticated');
+            setError('Session verification failed. Please try again.');
+          }
+        } catch (verifyErr) {
+          console.error('❌ Verification failed:', verifyErr);
+          setError('Session verification failed. Please try again.');
+        }
       }
     } catch (err) {
+      console.error('❌ Login error:', err);
       setError(err.response?.data?.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
