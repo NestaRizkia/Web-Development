@@ -3,6 +3,9 @@ export const login = async (req, res) => {
   try {
     const { password } = req.body;
     
+    console.log('Login attempt - Password provided:', !!password);
+    console.log('Environment ADMIN_PASSWORD:', process.env.ADMIN_PASSWORD ? 'Set' : 'Not set');
+    
     if (!password) {
       return res.status(400).json({ message: 'Password is required' });
     }
@@ -15,11 +18,22 @@ export const login = async (req, res) => {
         loginTime: new Date()
       };
       
+      // Save session explicitly
+      await new Promise((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+      
+      console.log('Login successful, session created:', req.sessionID);
+      
       return res.status(200).json({ 
         message: 'Login successful',
         user: { isAdmin: true }
       });
     } else {
+      console.log('Invalid password attempt');
       return res.status(401).json({ message: 'Invalid password' });
     }
   } catch (error) {
